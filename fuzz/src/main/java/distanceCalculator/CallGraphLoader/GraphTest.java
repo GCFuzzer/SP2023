@@ -10,7 +10,10 @@ import java.util.Arrays;
 public class GraphTest {
     public static void main(String[] args) throws IOException {
         LoadCallGraphFromChain graph = new LoadCallGraphFromChain();
-        String targetChain = "<java.util.PriorityQueue: void readObject(java.io.ObjectInputStream)>--><java.util.PriorityQueue: void heapify()>--><java.util.PriorityQueue: void siftDown(int,java.lang.Object)>--><java.util.PriorityQueue: void siftDownUsingComparator(int,java.lang.Object)>--><org.apache.commons.collections4.comparators.TransformingComparator: int compare(java.lang.Object,java.lang.Object)>--><org.apache.commons.collections4.functors.InvokerTransformer: java.lang.Object transform(java.lang.Object)>--><java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>";
+        String targetChain = "<java.util.PriorityQueue: void readObject(java.io.ObjectInputStream)>--><java.util.PriorityQueue: void heapify()>--><java.util.PriorityQueue: void siftDown(int,java.lang.Object)>--><java.util.PriorityQueue: void siftDownUsingComparator(int,java.lang.Object)>--><org.apache.commons.collections4.comparators.TransformingComparator: int compare(java.lang.Object,java.lang.Object)>--><java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>";
+        String[] MethodList = targetChain.split("-->");
+        String source = MethodList[0].substring(1,MethodList[0].length()-1).split(":")[0];
+        System.out.println(source);
         graph.callGraphLoader(targetChain);
         graph.setBlockMethodMap();
         System.out.println(graph.getClassNodeMap());

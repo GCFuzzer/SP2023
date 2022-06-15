@@ -47,7 +47,7 @@ public class Distance implements TraceEventVisitor {
     /** The coverage counts for each edge. */
     private final DistanceCounter distanceCounter = new NonInfiniteCachingDistanceCounter(COVERAGE_MAP_SIZE);
 
-    public LoadCallGraphFromChain graph;
+    public LoadCallGraphFromChain graph = new LoadCallGraphFromChain();
 
     /** Creates a new distance map. */
     public Distance() {

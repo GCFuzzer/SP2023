@@ -43,8 +43,8 @@ public class ObjectGenerator extends Generator<PriorityQueue> {
         PriorityQueue queue = new PriorityQueue();
         queue.add(1);
         queue.add(1);
-        InvokerTransformer transformer = new InvokerTransformer(null,null,null);
-        TransformingComparator transformer_comparator = new TransformingComparator(transformer,null);
+        // InvokerTransformer transformer = new InvokerTransformer(null,null,null);
+        TransformingComparator transformer_comparator = new TransformingComparator(null,null);
 
         //设置comparator属性
         Field field13 = null;

@@ -34,7 +34,7 @@ public class SnoopInstructionTransformer implements ClassFileTransformer {
       for (Class clazz : inst.getAllLoadedClasses()) {
         try {
           String cname = clazz.getName().replace(".","/");
-          if (shouldExclude(cname) == false) {
+          if (!shouldExclude(cname)) {
             if (inst.isModifiableClass(clazz)) {
               inst.retransformClasses(clazz);
             } else {

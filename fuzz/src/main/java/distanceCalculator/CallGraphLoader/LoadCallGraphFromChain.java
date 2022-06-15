@@ -3,6 +3,7 @@ package distanceCalculator.CallGraphLoader;
 import distanceCalculator.ControlFlowGraphGenerator.ControlFlowGraph;
 import distanceCalculator.ControlFlowGraphGenerator.ControlFlowGraphBuilder;
 import distanceCalculator.ControlFlowGraphGenerator.InsnBlock;
+import janala.instrument.GlobalStateForInstrumentation;
 import org.jgrapht.alg.interfaces.ShortestPathAlgorithm;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultEdge;
@@ -20,7 +21,7 @@ import java.io.Writer;
 import java.util.*;
 
 public class LoadCallGraphFromChain {
-    // public static LoadCallGraphFromChain loader = new LoadCallGraphFromChain();
+/*    public static LoadCallGraphFromChain graph = new LoadCallGraphFromChain();*/
     public String sink;
     private final double c = 5.0;
     private final double infiniteNumber = Double.MAX_VALUE;
