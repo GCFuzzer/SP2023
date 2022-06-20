@@ -5,12 +5,12 @@ pushd `dirname $0` > /dev/null
 BIN_DIR=`pwd`
 popd > /dev/null
 
-export JVM_OPTS="$JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
+#export JVM_OPTS="$JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
 
 ROOT_DIR=`dirname $BIN_DIR`
 
 print_usage() {
-  echo "Usage: $0 [-c CLASSPATH] [-v] TEST_CLASS TEST_METHOD [OUT_DIR [SEED_FILES...]]"
+  echo "Usage: $0 [-c CLASSPATH] [-v] TEST_CLASS TEST_METHOD TEST_CHAINS [OUT_DIR [SEED_FILES...]]"
 }
 
 while getopts ":c:vt:" opt; do

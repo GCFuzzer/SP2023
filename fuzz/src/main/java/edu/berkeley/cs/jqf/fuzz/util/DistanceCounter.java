@@ -95,7 +95,7 @@ public class DistanceCounter {
      * @return the new value after incrementing the count
      */
     public double distanceIncrement(int key, double value) {
-        return incrementAtIndex(idx(key), value);
+        return incrementAtIndex(key, value);
     }
 
     /**

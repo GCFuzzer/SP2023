@@ -93,7 +93,7 @@ public class Distance implements TraceEventVisitor {
                 if (blockMethodMap.get(ib).equals(signature)) {
                     for (String line: ib.lines) {
                         if (line.startsWith("ldc " + e.getIid()) && ib.getDistance()!=Double.MAX_VALUE){
-                            distanceCounter.distanceIncrement(e.getIid(), ib.getDistance());
+                            distanceCounter.distanceIncrement(e.getLineNumber(), ib.getDistance());
                         }
                     }
                 }
@@ -112,7 +112,7 @@ public class Distance implements TraceEventVisitor {
                 if (blockMethodMap.get(ib).equals(signature)) {
                     for (String line: ib.lines) {
                         if (line.startsWith("ldc " + e.getIid()) && ib.getDistance()!=Double.MAX_VALUE){
-                            distanceCounter.distanceIncrement(e.getIid(), ib.getDistance());
+                            distanceCounter.distanceIncrement(e.getLineNumber(), ib.getDistance());
                         }
                     }
                 }

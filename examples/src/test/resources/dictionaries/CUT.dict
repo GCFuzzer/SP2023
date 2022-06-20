@@ -1,2 +1,3 @@
 java.util.PriorityQueue
 org.apache.commons.collections4.comparators.TransformingComparator
+org.apache.commons.collections4.functors.InvokerTransformer

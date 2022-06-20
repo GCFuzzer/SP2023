@@ -211,6 +211,8 @@ public class GCFuzzGuidance implements Guidance {
     // TODO: xxx_Count
     protected long branchCount;
 
+    protected boolean shouldConstruct = false;
+
     // ------------- FUZZING HEURISTICS ------------
 
     /** Max input size to generate. */
@@ -229,7 +231,7 @@ public class GCFuzzGuidance implements Guidance {
     protected final double MEAN_MUTATION_COUNT = 8.0;
 
     /** Mean number of contiguous bytes to mutate in each mutation. */
-    protected final double MEAN_MUTATION_SIZE = 4.0; // Bytes
+    protected final double MEAN_MUTATION_SIZE = 3.0; // Bytes
 
     /** Whether to save inputs that only add new coverage bits (but no new responsibilities). */
     protected final boolean DISABLE_SAVE_NEW_COUNTS = Boolean.getBoolean("jqf.ei.DISABLE_SAVE_NEW_COUNTS");
@@ -472,14 +474,14 @@ public class GCFuzzGuidance implements Guidance {
 
         // Go over all inputs and do a sanity check (plus log)
         infoLog("Here is a list of favored inputs:");
-        int sumResponsibilities = 0;
+/*        int sumResponsibilities = 0;*/
         numFavoredLastCycle = 0;
         for (Input input : savedInputs) {
             if (input.isFavored()) {
                 int responsibleFor = input.responsibilities.size();
                 //TODO: redefine "responsibility"
                 infoLog("Input %d is responsible for %d basic blocks", input.id, responsibleFor);
-                sumResponsibilities += responsibleFor;
+/*                sumResponsibilities += responsibleFor;*/
                 numFavoredLastCycle++;
             }
         }
@@ -601,7 +603,6 @@ public class GCFuzzGuidance implements Guidance {
 
         // All generated seeds are valid because we did not set any assumption
         if (runDistance.getZeroCount() == 0) {
-            //TODO: We just judge whether the basic block in the sink method is invoked
 
             // Coverage before
             int coverageBefore = totalDistance.getExecutedBlocks();
@@ -632,23 +633,23 @@ public class GCFuzzGuidance implements Guidance {
             boolean toSave = false;
             String why = "";
 
-            if (!DISABLE_SAVE_NEW_COUNTS && coverageBitsUpdated) {
+/*            if (!DISABLE_SAVE_NEW_COUNTS && coverageBitsUpdated) {
                 toSave = true;
                 why = why + "+count";
-            }
+            }*/
 
             // Save if new total coverage found
-            if (coverageAfter > coverageBefore) {
+/*            if (coverageAfter > coverageBefore) {
                 // Must be responsible for some branch
                 assert(responsibilities.size() > 0);
                 toSave = true;
                 why = why + "+cov";
-            }
+            }*/
 
             // Save if distance is smaller
             if (minDistanceUpdated) {
                 // Must be responsible for some branch
-                // assert(responsibilities.size() > 0);
+                assert(responsibilities.size() > 0);
                 toSave = true;
                 why = why + "-distance";
             }
@@ -723,44 +724,42 @@ public class GCFuzzGuidance implements Guidance {
             result.addAll(NewBlock);
         }
 
-/*        // Perhaps it can also steal responsibility from other inputs
-        if (STEAL_RESPONSIBILITY) {
-            int currentNonZeroCoverage = runDistance.getNonZeroCount();
-            int currentInputSize = currentInput.size();
-            Set<?> covered = new HashSet<>(runDistance.getCovered());
+        // Perhaps it can also steal responsibility from other inputs
+        int currentNonZeroCoverage = runDistance.getExecutedBlocks();
+        int currentInputSize = currentInput.size();
+        Set<?> covered = new HashSet<>(runDistance.getExecutedBlockIds());
 
-            // Search for a candidate to steal responsibility from
-            candidate_search:
-            for (Input candidate : savedInputs) {
-                Set<?> responsibilities = candidate.responsibilities;
+        // Search for a candidate to steal responsibility from
+        candidate_search:
+        for (Input candidate : savedInputs) {
+            Set<?> responsibilities = candidate.responsibilities;
 
-                // Candidates with no responsibility are not interesting
-                if (responsibilities.isEmpty()) {
-                    continue candidate_search;
-                }
-
-                // To avoid thrashing, only consider candidates with either
-                // (1) strictly smaller total coverage or
-                // (2) same total coverage but strictly larger size
-                if (candidate.nonZeroCoverage < currentNonZeroCoverage ||
-                        (candidate.nonZeroCoverage == currentNonZeroCoverage &&
-                                currentInputSize < candidate.size())) {
-
-                    // Check if we can steal all responsibilities from candidate
-                    for (Object b : responsibilities) {
-                        if (covered.contains(b) == false) {
-                            // Cannot steal if this input does not cover something
-                            // that the candidate is responsible for
-                            continue candidate_search;
-                        }
-                    }
-                    // If all of candidate's responsibilities are covered by the
-                    // current input, then it can completely subsume the candidate
-                    result.addAll(responsibilities);
-                }
-
+            // Candidates with no responsibility are not interesting
+            if (responsibilities.isEmpty()) {
+                continue candidate_search;
             }
-        }*/
+
+            // To avoid thrashing, only consider candidates with either
+            // (1) strictly smaller total coverage or
+            // (2) same total coverage but strictly larger size
+            if (candidate.nonZeroCoverage < currentNonZeroCoverage ||
+                    (candidate.nonZeroCoverage == currentNonZeroCoverage &&
+                            currentInputSize < candidate.size())) {
+
+                // Check if we can steal all responsibilities from candidate
+                for (Object b : responsibilities) {
+                    if (!covered.contains(b)) {
+                        // Cannot steal if this input does not cover something
+                        // that the candidate is responsible for
+                        continue candidate_search;
+                    }
+                }
+                // If all of candidate's responsibilities are covered by the
+                // current input, then it can completely subsume the candidate
+                result.addAll(responsibilities);
+            }
+
+        }
 
         return result;
     }
@@ -797,7 +796,8 @@ public class GCFuzzGuidance implements Guidance {
         // Third, store basic bookkeeping data
         currentInput.id = newInputIdx;
         currentInput.saveFile = saveFile;
-        //TODO: update "currentInput.distance"
+        currentInput.nonZeroCoverage = runDistance.getExecutedBlocks();
+        currentInput.power = (runDistance.getDistance() - minDistance)/(maxDistance-minDistance);
         currentInput.distance = runDistance.getDistance();
         currentInput.offspring = 0;
         savedInputs.get(currentParentInputIdx).offspring += 1;
@@ -832,10 +832,7 @@ public class GCFuzzGuidance implements Guidance {
         graph.clear();
         graph.callGraphLoader(targetChain);
         graph.setBlockMethodMap();
-
-        // Collect totalCoverage
         runDistance.setGraph(this.graph);
-        // Construct call graph and control flow graph for distance computing.
 
         return this::handleEvent;
     }
@@ -846,7 +843,6 @@ public class GCFuzzGuidance implements Guidance {
      * @param e the trace event to be handled
      */
     protected void handleEvent(TraceEvent e) {
-
         String signature = e.getContainingClass().split("/")[e.getContainingClass().split("/").length-1]+ "." +e.getContainingMethodName();
         if (graph.getClassNodeMap().containsValue(signature)) {
             runDistance.handleEvent(e);
@@ -902,6 +898,13 @@ public class GCFuzzGuidance implements Guidance {
          * <p>This field is null for inputs that are not saved.</p>
          */
         double distance = Double.MAX_VALUE;
+
+        /**
+         * The normalized seed distance for this input, if the input is saved.
+         *
+         * <p>This field is null for inputs that are not saved.</p>
+         */
+        double power;
 
         /**
          * The run coverage for this input, if the input is saved.

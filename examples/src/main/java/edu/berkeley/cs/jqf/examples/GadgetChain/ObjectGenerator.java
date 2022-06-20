@@ -40,11 +40,11 @@ public class ObjectGenerator extends Generator<PriorityQueue> {
 
     @Override
     public PriorityQueue generate(SourceOfRandomness random, GenerationStatus status) {
-        PriorityQueue queue = new PriorityQueue();
+        PriorityQueue queue = new PriorityQueue(2);
         queue.add(1);
         queue.add(1);
-        // InvokerTransformer transformer = new InvokerTransformer(null,null,null);
-        TransformingComparator transformer_comparator = new TransformingComparator(null,null);
+        InvokerTransformer transformer = new InvokerTransformer(null,null,null);
+        TransformingComparator transformer_comparator = new TransformingComparator(transformer,null);
 
         //设置comparator属性
         Field field13 = null;

@@ -29,8 +29,12 @@
 
 package edu.berkeley.cs.jqf.fuzz.gc;
 
-import java.io.File;
+import java.io.*;
+import java.nio.file.Files;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 import edu.berkeley.cs.jqf.fuzz.junit.GuidedFuzzing;
 import org.junit.runner.Result;
@@ -42,50 +46,78 @@ import org.junit.runner.Result;
  */
 public class GCFuzzDriver {
 
-    public static void main(String[] args) {
-        if (args.length < 2){
-            System.err.println("Usage: java " + GCFuzzDriver.class + " TEST_CLASS TEST_METHOD [OUTPUT_DIR [SEED_DIR | SEED_FILES...]]");
+    public static void main(String[] args) throws IOException {
+        if (args.length < 3){
+            System.err.println("Usage: java " + GCFuzzDriver.class + " TEST_CLASS TEST_METHOD TEST_CHAINS [OUTPUT_DIR [SEED_DIR | SEED_FILES...]]");
             System.exit(1);
         }
 
         String testClassName  = args[0];
         String testMethodName = args[1];
-        String targetChain = "<java.util.PriorityQueue: void readObject(java.io.ObjectInputStream)>--><java.util.PriorityQueue: void heapify()>--><java.util.PriorityQueue: void siftDown(int,java.lang.Object)>--><java.util.PriorityQueue: void siftDownUsingComparator(int,java.lang.Object)>--><org.apache.commons.collections4.comparators.TransformingComparator: int compare(java.lang.Object,java.lang.Object)>--><org.apache.commons.collections4.functors.InvokerTransformer: java.lang.Object transform(java.lang.Object)>--><java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>";
-        String outputDirectoryName = args.length > 2 ? args[2] : "fuzz-results";
+        // String targetChain = "<java.util.PriorityQueue: void readObject(java.io.ObjectInputStream)>--><java.util.PriorityQueue: void heapify()>--><java.util.PriorityQueue: void siftDown(int,java.lang.Object)>--><java.util.PriorityQueue: void siftDownUsingComparator(int,java.lang.Object)>--><org.apache.commons.collections4.comparators.TransformingComparator: int compare(java.lang.Object,java.lang.Object)>--><java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>";
+        String filePath = args[2];
+        String outputDirectoryName = args.length > 3 ? args[3] : "fuzz-results";
         File outputDirectory = new File(outputDirectoryName);
         File[] seedFiles = null;
-        if (args.length > 3) {
-            seedFiles = new File[args.length-3];
-            for (int i = 3; i < args.length; i++) {
-                seedFiles[i-3] = new File(args[i]);
+        if (args.length > 4) {
+            seedFiles = new File[args.length-4];
+            for (int i = 4; i < args.length; i++) {
+                seedFiles[i-4] = new File(args[i]);
             }
         }
+
+        File file = new File(filePath);
+        if (!file.exists()) {
+            throw new IllegalArgumentException("File Not Exist: " + filePath);
+        }
+        List<String> lines = Files.readAllLines(file.toPath());
 
         try {
             // Load the guidance
             String title = testClassName+"#"+testMethodName;
             GCFuzzGuidance guidance = null;
+            FileWriter fw = null;
+            List<String> targetClass= new ArrayList<>();
+            File fileWriter = new File("./examples/src/test/resources/dictionaries/CUT.dict");
+            Writer out = new FileWriter(fileWriter);
+            BufferedWriter bw= new BufferedWriter(out);
 
-            //for each chain, we limit the validation time to 100 seconds
-            if (seedFiles == null) {
-                guidance = new GCFuzzGuidance(title, targetChain, Duration.ofSeconds(10000), outputDirectory);
-            } else if (seedFiles.length == 1 && seedFiles[0].isDirectory()) {
-                guidance = new GCFuzzGuidance(title, targetChain, Duration.ofSeconds(100), outputDirectory, seedFiles[0]);
-            } else {
-                guidance = new GCFuzzGuidance(title, targetChain, Duration.ofSeconds(100), outputDirectory, seedFiles);
+            // validate each chain
+            for(String line : lines){
+                String[] MethodList = line.split("-->");
+                for (String signature: MethodList) {
+                    targetClass.add(signature.substring(1,signature.length()-1).split(":")[0]);
+                }
+                LinkedHashSet<String> hashSet = new LinkedHashSet<>(targetClass);
+                ArrayList<String> listWithoutDuplicates = new ArrayList<>(hashSet);
+                for (String s: listWithoutDuplicates) {
+                    if (s.equals("java.lang.reflect.Method")) {
+                        continue;
+                    }
+                    bw.write(s);
+                    bw.newLine();
+                    bw.flush();
+                }
+                bw.close();
+
+                if (seedFiles == null) {
+                    guidance = new GCFuzzGuidance(title, line, Duration.ofSeconds(100000), outputDirectory);
+                } else if (seedFiles.length == 1 && seedFiles[0].isDirectory()) {
+                    guidance = new GCFuzzGuidance(title, line, Duration.ofSeconds(100), outputDirectory, seedFiles[0]);
+                } else {
+                    guidance = new GCFuzzGuidance(title, line, Duration.ofSeconds(100), outputDirectory, seedFiles);
+                }
+
+                // Run the Junit test
+                Result res = GuidedFuzzing.run(testClassName, testMethodName, guidance, System.out);
+                // TODO: define "jqf.ei.EXIT_ON_TIMEOUT"
+                if (Boolean.getBoolean("jqf.ei.EXIT_ON_TIMEOUT")) {
+                    continue;
+                }
+                if (Boolean.getBoolean("jqf.ei.EXIT_ON_CRASH") && !res.wasSuccessful()) {
+                    System.exit(3);
+                }
             }
-
-
-            // Run the Junit test
-            Result res = GuidedFuzzing.run(testClassName, testMethodName, guidance, System.out);
-            if (Boolean.getBoolean("jqf.logDistance")) {
-                System.out.printf("Minimum distance is %.2f",
-                        guidance.getMinDistance());
-            }
-            if (Boolean.getBoolean("jqf.ei.EXIT_ON_CRASH") && !res.wasSuccessful()) {
-                System.exit(3);
-            }
-
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(2);
