@@ -54,7 +54,6 @@ public class GCFuzzDriver {
 
         String testClassName  = args[0];
         String testMethodName = args[1];
-        // String targetChain = "<java.util.PriorityQueue: void readObject(java.io.ObjectInputStream)>--><java.util.PriorityQueue: void heapify()>--><java.util.PriorityQueue: void siftDown(int,java.lang.Object)>--><java.util.PriorityQueue: void siftDownUsingComparator(int,java.lang.Object)>--><org.apache.commons.collections4.comparators.TransformingComparator: int compare(java.lang.Object,java.lang.Object)>--><java.lang.reflect.Method: java.lang.Object invoke(java.lang.Object,java.lang.Object[])>";
         String filePath = args[2];
         String outputDirectoryName = args.length > 3 ? args[3] : "fuzz-results";
         File outputDirectory = new File(outputDirectoryName);
@@ -91,7 +90,7 @@ public class GCFuzzDriver {
                 LinkedHashSet<String> hashSet = new LinkedHashSet<>(targetClass);
                 ArrayList<String> listWithoutDuplicates = new ArrayList<>(hashSet);
                 for (String s: listWithoutDuplicates) {
-                    if (s.equals("java.lang.reflect.Method")) {
+                    if (s.startsWith("java.lang.reflect")) {
                         continue;
                     }
                     bw.write(s);
@@ -101,7 +100,7 @@ public class GCFuzzDriver {
                 bw.close();
 
                 if (seedFiles == null) {
-                    guidance = new GCFuzzGuidance(title, line, Duration.ofSeconds(100000), outputDirectory);
+                    guidance = new GCFuzzGuidance(title, line, Duration.ofSeconds(100), outputDirectory);
                 } else if (seedFiles.length == 1 && seedFiles[0].isDirectory()) {
                     guidance = new GCFuzzGuidance(title, line, Duration.ofSeconds(100), outputDirectory, seedFiles[0]);
                 } else {
@@ -110,14 +109,15 @@ public class GCFuzzDriver {
 
                 // Run the Junit test
                 Result res = GuidedFuzzing.run(testClassName, testMethodName, guidance, System.out);
-                // TODO: define "jqf.ei.EXIT_ON_TIMEOUT"
                 if (Boolean.getBoolean("jqf.ei.EXIT_ON_TIMEOUT")) {
                     continue;
                 }
-                if (Boolean.getBoolean("jqf.ei.EXIT_ON_CRASH") && !res.wasSuccessful()) {
-                    System.exit(3);
+                if (Boolean.getBoolean("jqf.ei.EXIT_ON_ORACLE") && res.wasSuccessful()) {
+                    continue;
                 }
             }
+            System.exit(3);
+
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(2);

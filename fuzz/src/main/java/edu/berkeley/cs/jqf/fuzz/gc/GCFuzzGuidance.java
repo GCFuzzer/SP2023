@@ -213,6 +213,9 @@ public class GCFuzzGuidance implements Guidance {
 
     protected boolean shouldConstruct = false;
 
+    /** Whether to stop/exit once a crash is found. **/
+    protected final boolean EXIT_ON_ORACLE = Boolean.getBoolean("jqf.ei.EXIT_ON_ORACLE");
+
     // ------------- FUZZING HEURISTICS ------------
 
     /** Max input size to generate. */
@@ -405,7 +408,7 @@ public class GCFuzzGuidance implements Guidance {
                 console.printf("\033[H");
                 console.printf(this.getTitle() + "\n");
                 if (this.testName != null) {
-                    console.printf("Test name:        %s\n", this.testName);
+                    console.printf("Test name         %s\n", this.testName);
                 }
                 console.printf("Results directory:    %s\n", this.outputDirectory.getAbsolutePath());
                 console.printf("Elapsed time:         %s (%s)\n", millisToDuration(elapsedMilliseconds),
@@ -587,7 +590,8 @@ public class GCFuzzGuidance implements Guidance {
         Date now = new Date();
         long elapsedMilliseconds = now.getTime() - startTime.getTime();
         // TODO: how to define reachable
-        if (oracleIdx >= 1) {
+        if (EXIT_ON_ORACLE && oracleIdx >= 1) {
+            oracleIdx = 0;
             return false;
         }
         return elapsedMilliseconds < maxDurationMillis;

